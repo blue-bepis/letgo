@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+  <title>LET GO</title>
+  <meta name="description" content="A little place to leave things behind.">
+  <meta name="referrer" content="no-referrer">
+  <!--
+    PRIVACY GUARD: this tells the browser to refuse any network connection made by
+    the page's JavaScript (fetch, XHR, WebSocket...), plus forms, frames and plugins.
+    So even by accident, the letter cannot be sent anywhere from this page.
+    (When we add the optional Spotify/YouTube player later, this line will be
+    loosened only for that opt-in feature.)
+  -->
+  <meta http-equiv="Content-Security-Policy"
+        content="connect-src 'none'; form-action 'none'; frame-src 'none'; object-src 'none'; base-uri 'none';">
+  <link rel="stylesheet" href="styles/style.css">
+</head>
+
+<body data-state="writing">
+
+  <!-- ============ THE PAINTED WORLD (stays behind everything) ============
+       The picture is split into four stacked layers (sky, mountains, lake,
+       foreground). They sit still while you write. During the final journey
+       they slide down at different speeds, which makes the camera feel like
+       it is rising. scripts/scene.js positions and moves them. -->
+  <div class="scene" id="scene" aria-hidden="true">
+
+    <!-- Shared paints, brushes and the pine-tree shape (this piece draws nothing itself) -->
+    <svg class="defs-svg" width="0" height="0" focusable="false" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="skyGrad" gradientUnits="userSpaceOnUse" x1="0" y1="-300" x2="0" y2="470">
+          <stop offset="0" stop-color="#04091a"/>
+          <stop offset="0.39" stop-color="#0b1530"/>
+          <stop offset="0.723" stop-color="#1c2e55"/>
+          <stop offset="1" stop-color="#506a8a"/>
+        </linearGradient>
+        <radialGradient id="moonGlow">
+          <stop offset="0" stop-color="#f6ecc9" stop-opacity="0.55"/>
+          <stop offset="1" stop-color="#f6ecc9" stop-opacity="0"/>
+        </radialGradient>
+        <linearGradient id="lakeGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#425f80"/>
+          <stop offset="1" stop-color="#14233a"/>
+        </linearGradient>
+        <linearGradient id="groundGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#25362b"/>
+          <stop offset="1" stop-color="#121a16"/>
+        </linearGradient>
+        <radialGradient id="fireGlow">
+          <stop offset="0" stop-color="#f0a040" stop-opacity="0.55"/>
+          <stop offset="0.5" stop-color="#d9742b" stop-opacity="0.18"/>
+          <stop offset="1" stop-color="#d9742b" stop-opacity="0"/>
+        </radialGradient>
+        <radialGradient id="vignette" cx="0.5" cy="0.45" r="0.75">
+          <stop offset="0.55" stop-color="#050a18" stop-opacity="0"/>
+          <stop offset="1" stop-color="#050a18" stop-opacity="0.6"/>
+        </radialGradient>
+
+        <!-- Watercolour wobble: slightly uneven, softly bleeding edges -->
+        <filter id="wc" x="-5%" y="-5%" width="110%" height="110%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="3" seed="4" result="noise"/>
+          <feDisplacementMap in="SourceGraphic" in2="noise" scale="12" xChannelSelector="R" yChannelSelector="G" result="wobbly"/>
+          <feGaussianBlur in="wobbly" stdDeviation="0.7"/>
+        </filter>
+        <!-- Cold-press paper grain, laid over the whole picture -->
+        <filter id="grain" x="0" y="0" width="100%" height="100%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="7" result="n"/>
+          <feColorMatrix in="n" type="matrix"
+            values="0 0 0 0 0.92  0 0 0 0 0.86  0 0 0 0 0.74  0 0 0 0.9 -0.28"/>
+        </filter>
+
+        <!-- One pine tree, reused many times at different sizes -->
+        <symbol id="pine" viewBox="0 0 100 200">
+          <rect x="46" y="170" width="8" height="30"/>
+          <polygon points="50,8 20,82 80,82"/>
+          <polygon points="50,44 10,128 90,128"/>
+          <polygon points="50,86 2,178 98,178"/>
+        </symbol>
+      </defs>
+    </svg>
+
+    <!-- LAYER 1: Sky, stars, moon (extends far above the first view, for the journey up) -->
+    <svg id="layer-sky-svg" class="layer" viewBox="0 -420 1600 1320" xmlns="http://www.w3.org/2000/svg" focusable="false">
+      <g id="layer-sky">
+        <rect x="0" y="-420" width="1600" height="1320" fill="url(#skyGrad)"/>
+        <g id="stars"></g><!-- filled in by scripts/scene.js -->
+        <circle id="moon-glow" cx="1230" cy="190" r="210" fill="url(#moonGlow)"/>
+        <circle id="moon" cx="1230" cy="190" r="68" fill="#f3e9c8" filter="url(#wc)"/>
+        <circle cx="1212" cy="176" r="12" fill="#e2d5ad" opacity="0.55" filter="url(#wc)"/>
+        <circle cx="1252" cy="208" r="9" fill="#e2d5ad" opacity="0.45" filter="url(#wc)"/>
+      </g>
+    </svg>
+
+    <!-- LAYER 2: Distant mountains (their bodies reach down so nothing shows through later) -->
+    <svg id="layer-mountains-svg" class="layer" viewBox="0 240 1600 760" xmlns="http://www.w3.org/2000/svg" focusable="false">
+      <g id="layer-mountains" filter="url(#wc)">
+        <path fill="#4d6585" opacity="0.92"
+          d="M0 1000 L0 360 L120 300 L220 352 L340 250 L470 340 L560 300 L700 384 L820 292 L960 362 L1080 270 L1220 352 L1340 300 L1460 352 L1600 282 L1600 1000 Z"/>
+        <path fill="#33496a"
+          d="M0 1000 L0 404 L160 352 L300 412 L460 342 L620 422 L760 382 L900 432 L1050 362 L1200 422 L1350 372 L1480 412 L1600 362 L1600 1000 Z"/>
+      </g>
+    </svg>
+
+    <!-- LAYER 3: Lake and the moon's reflection -->
+    <svg id="layer-lake-svg" class="layer" viewBox="0 420 1600 300" xmlns="http://www.w3.org/2000/svg" focusable="false">
+      <g id="layer-lake">
+        <rect y="440" width="1600" height="240" fill="url(#lakeGrad)" filter="url(#wc)"/>
+        <g id="moon-reflection" fill="#f3e9c8" filter="url(#wc)">
+          <rect x="1185" y="480" width="90" height="7" rx="3" opacity="0.40"/>
+          <rect x="1195" y="502" width="70" height="6" rx="3" opacity="0.34"/>
+          <rect x="1203" y="526" width="54" height="6" rx="3" opacity="0.28"/>
+          <rect x="1210" y="554" width="40" height="5" rx="2" opacity="0.22"/>
+          <rect x="1216" y="584" width="28" height="4" rx="2" opacity="0.16"/>
+        </g>
+      </g>
+    </svg>
+
+    <!-- LAYER 4: Foreground — ground, pine trees, campfire, bear (all move together) -->
+    <svg id="layer-front-svg" class="layer" viewBox="0 200 1600 710" xmlns="http://www.w3.org/2000/svg" focusable="false">
+      <!-- Foreground ground / shore -->
+      <g id="layer-ground">
+        <path fill="url(#groundGrad)" filter="url(#wc)"
+          d="M0 690 Q300 648 700 670 T1600 658 L1600 900 L0 900 Z"/>
+        <ellipse id="fire-glow" cx="800" cy="770" rx="330" ry="80" fill="url(#fireGlow)"/>
+      </g>
+
+      <!-- Pine trees framing left and right -->
+      <g id="layer-trees-left" filter="url(#wc)">
+        <use href="#pine" x="110" y="380" width="150" height="300" fill="#1d3b2e"/>
+        <use href="#pine" x="-60" y="250" width="240" height="480" fill="#17302a"/>
+        <use href="#pine" x="-110" y="420" width="170" height="340" fill="#0f211c"/>
+      </g>
+      <g id="layer-trees-right" filter="url(#wc)">
+        <use href="#pine" x="1300" y="400" width="150" height="300" fill="#1d3b2e"/>
+        <use href="#pine" x="1420" y="220" width="250" height="500" fill="#17302a"/>
+        <use href="#pine" x="1500" y="430" width="170" height="340" fill="#0f211c"/>
+      </g>
+
+      <!-- Campfire -->
+      <g id="layer-campfire">
+        <g fill="#6f6f78" filter="url(#wc)">
+          <circle cx="722" cy="784" r="15"/><circle cx="748" cy="800" r="14"/>
+          <circle cx="800" cy="806" r="15"/><circle cx="852" cy="800" r="14"/>
+          <circle cx="878" cy="784" r="15"/>
+        </g>
+        <g id="logs" filter="url(#wc)">
+          <rect x="742" y="765" width="116" height="19" rx="9" fill="#4a2f22" transform="rotate(-12 800 774)"/>
+          <rect x="742" y="765" width="116" height="19" rx="9" fill="#5a3a2a" transform="rotate(12 800 774)"/>
+        </g>
+        <g id="flames" filter="url(#wc)">
+          <path class="flame-outer" fill="#d9742b"
+            d="M766 774 C744 736 772 716 784 680 C790 702 806 700 800 658 C832 690 856 732 834 774 Z"/>
+          <path class="flame-inner" fill="#f2b45a"
+            d="M783 774 C772 752 792 740 800 710 C814 738 826 754 817 774 Z"/>
+          <ellipse class="flame-core" cx="800" cy="762" rx="9" ry="12" fill="#fbe3a0"/>
+        </g>
+      </g>
+
+      <!-- The small bear, sitting upright, roasting a marshmallow -->
+      <g id="layer-bear" transform="translate(960 778)" filter="url(#wc)">
+        <ellipse cx="-30" cy="-8" rx="21" ry="14" fill="#5d3f2e"/>
+        <ellipse cx="30" cy="-8" rx="21" ry="14" fill="#5d3f2e"/>
+        <ellipse cx="0" cy="-48" rx="42" ry="52" fill="#6b4a37"/>
+        <ellipse cx="0" cy="-40" rx="24" ry="34" fill="#8a6650"/>
+        <g id="bear-arm">
+        <line x1="-60" y1="-92" x2="-142" y2="-44" stroke="#5a3b26" stroke-width="3" stroke-linecap="round"/>
+        <rect x="-158" y="-58" width="20" height="15" rx="6" fill="#f4ecd8" transform="rotate(-30 -148 -50)"/>
+        <rect x="-158" y="-58" width="9" height="15" rx="4" fill="#c88a4a" transform="rotate(-30 -148 -50)"/>
+        <path d="M-28 -80 L-62 -92" stroke="#6b4a37" stroke-width="16" stroke-linecap="round" fill="none"/>
+        </g>
+        <g id="bear-head">
+        <circle cx="0" cy="-114" r="32" fill="#6b4a37"/>
+        <circle cx="-24" cy="-141" r="11" fill="#6b4a37"/>
+        <circle cx="24" cy="-141" r="11" fill="#6b4a37"/>
+        <circle cx="-24" cy="-141" r="5" fill="#8a6650"/>
+        <circle cx="24" cy="-141" r="5" fill="#8a6650"/>
+        <ellipse cx="0" cy="-104" rx="15" ry="11" fill="#a8856a"/>
+        <ellipse cx="0" cy="-109" rx="5" ry="3.5" fill="#2a1a14"/>
+        <circle class="bear-eye" cx="-12" cy="-120" r="3" fill="#1c120e"/>
+        <circle class="bear-eye" cx="12" cy="-120" r="3" fill="#1c120e"/>
+        </g>
+      </g>
+    </svg>
+
+    <!-- Softly darkened edges, then paper grain on top (this layer never moves) -->
+    <svg class="overlay" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg" focusable="false">
+      <rect width="1600" height="900" fill="url(#vignette)"/>
+      <rect width="1600" height="900" filter="url(#grain)" opacity="0.12"/>
+    </svg>
+  </div>
+  <div class="veil" aria-hidden="true"></div>
+
+  <!-- One quiet shooting star, used once during the journey to the sky -->
+  <div id="shooting-star" class="shooting-star" aria-hidden="true"></div>
+
+  <!-- ============ SMALL WORDMARK ============ -->
+  <header class="wordmark">
+    <span class="wordmark-name">LET GO</span>
+    <span class="wordmark-tag">A little place to leave things behind.</span>
+  </header>
+
+  <!-- ============ SOUND CONTROL (sound stays OFF until the visitor turns it on) ============ -->
+  <div class="sound" id="sound">
+    <button type="button" id="sound-button" class="sound-button" data-sound="off"
+            aria-label="Sound settings (sound is off)" aria-expanded="false" aria-controls="sound-panel">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 9v6h4l5 4V5L8 9H4z"/>
+        <g class="icon-waves"><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a8.5 8.5 0 0 1 0 12"/></g>
+        <g class="icon-mute"><path d="M17 9l5 6M22 9l-5 6"/></g>
+      </svg>
+    </button>
+    <div id="sound-panel" class="sound-panel paper" role="group" aria-label="Sound" hidden>
+      <p class="small sound-note">Sound starts off. Turn on whatever you'd like.</p>
+      <div class="sound-row">
+        <label><input type="checkbox" id="music-on"> Music</label>
+        <input type="range" id="music-volume" min="0" max="100" value="60" aria-label="Music volume">
+      </div>
+      <div class="sound-row">
+        <label><input type="checkbox" id="fx-on"> Fire crackle</label>
+        <input type="range" id="fx-volume" min="0" max="100" value="60" aria-label="Fire crackle volume">
+      </div>
+      <p id="sound-status" class="sound-status" role="status" aria-live="polite"></p>
+    </div>
+  </div>
+
+  <noscript>
+    <p class="noscript">LET GO needs JavaScript to work. Nothing you write here is ever sent anywhere.</p>
+  </noscript>
+
+  <!-- Spoken updates for screen-reader users during the burning (not visible) -->
+  <p id="ritual-status" class="sr-only" role="status" aria-live="polite"></p>
+
+  <main class="stage">
+
+    <!-- ===== State A: Writing ===== -->
+    <section id="view-writing" class="view paper is-active" aria-labelledby="writing-title">
+      <h1 id="writing-title" class="invite" tabindex="-1">Let it out.</h1>
+      <p class="invite-sub">Whatever it is, whatever it takes. This space is yours.</p>
+      <label for="letter" class="salutation">Dear nobody,</label>
+      <textarea id="letter" placeholder="Start writing..."
+                autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false"
+                aria-describedby="privacy-note gentle-message"></textarea>
+      <p id="gentle-message" class="gentle" role="status" aria-live="polite"></p>
+      <div class="footer">
+        <p class="small">Take your time.</p>
+        <button type="button" id="btn-done" class="btn btn-primary">I'm done writing</button>
+      </div>
+      <p id="privacy-note" class="small privacy">Your words aren't being saved.</p>
+    </section>
+
+    <!-- ===== State B: Letter preview ===== -->
+    <section id="view-preview" class="view paper" aria-labelledby="preview-title" inert>
+      <h2 id="preview-title" class="invite" tabindex="-1">Read it one last time.</h2>
+      <p class="invite-sub">You can read it one last time. There's no rush.</p>
+      <div id="letter-sheet" class="letter-sheet" tabindex="0" role="region" aria-label="Your letter">
+        <p class="salutation">Dear nobody,</p>
+        <p id="letter-body" class="letter-body"></p>
+      </div>
+      <div class="footer">
+        <button type="button" id="btn-back" class="btn btn-quiet">Go back and write more</button>
+        <button type="button" id="btn-burn" class="btn btn-primary">Burn it away</button>
+      </div>
+    </section>
+
+    <!-- ===== State E: Final message (appears after the journey to the sky) ===== -->
+    <section id="view-final" class="view final" aria-labelledby="final-title" inert>
+      <h2 id="final-title" class="final-big" tabindex="-1">It's done.</h2>
+      <p class="final-line">You can put it down now.</p>
+      <p class="final-soft">Whatever happens next, you're going to be okay.</p>
+      <button type="button" id="btn-return" class="btn btn-primary">Return to quiet</button>
+    </section>
+
+  </main>
+
+  <!-- Skip: only visible while the letter is burning -->
+  <button type="button" id="btn-skip" class="btn btn-quiet skip" hidden>Skip</button>
+
+  <script src="scripts/scene.js"></script>
+  <script src="scripts/audio.js"></script>
+  <script src="scripts/burn.js"></script>
+  <script src="scripts/app.js"></script>
+</body>
+</html>
