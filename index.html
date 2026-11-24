@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
+  <title>LET GO — The Clearing</title>
+  <meta name="description" content="A little place to leave things behind." />
+  <meta name="referrer" content="no-referrer" />
+  <meta http-equiv="Content-Security-Policy" content="connect-src 'none'; form-action 'none'; frame-src 'none'; object-src 'none'; base-uri 'none';" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Homemade+Apple&display=swap" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body data-state="writing">
+  <main class="clearing-viewport" aria-label="A peaceful nighttime lakeside campsite with a glowing campfire and a brown bear roasting a marshmallow">
+    <div id="scene-stage" class="scene-stage">
+      <div id="scene-layers"></div>
+      <canvas id="fx-sky-canvas" class="fx-canvas" width="1672" height="941" style="z-index: 2;"></canvas>
+      <canvas id="fx-lake-canvas" class="fx-canvas" width="1672" height="941" style="z-index: 5;"></canvas>
+      <canvas id="fx-fire-canvas" class="fx-canvas" width="1672" height="941" style="z-index: 12;"></canvas>
+      <canvas id="fx-ambient-canvas" class="fx-canvas" width="1672" height="941" style="z-index: 20;"></canvas>
+      <canvas id="fx-discoveries-canvas" class="fx-canvas" width="1672" height="941" style="z-index: 21;"></canvas>
+      <canvas id="fx-bear-face-canvas" width="398" height="419"></canvas>
+      <button id="bear-hitbox" class="bear-hitbox" type="button" aria-label="Offer the bear a fresh marshmallow"></button>
+      <img id="ref-compare-overlay" class="ref-compare-overlay" src="assets/reference/reference_original.png" alt="" aria-hidden="true" />
+    </div>
+  </main>
+
+  <!-- Soft atmospheric twilight veil during writing & closing message -->
+  <div class="ritual-veil" aria-hidden="true"></div>
+
+  <!-- Pixel-art burning words canvas -->
+  <canvas id="burn-canvas" class="burn-canvas" aria-hidden="true"></canvas>
+
+  <!-- Minimal top-left title (fades away completely during burn & campsite) -->
+  <header class="wordmark">
+    <span class="wordmark-name">LET GO</span>
+  </header>
+
+  <p id="ritual-status" class="sr-only" role="status" aria-live="polite"></p>
+
+  <!-- Borderless Moonlit Ritual Views -->
+  <div class="ritual-stage">
+
+    <!-- Step 1: Write it down (no chunky card — floating directly in the night air) -->
+    <section id="view-writing" class="view is-active" aria-labelledby="writing-heading">
+      <h1 id="writing-heading" class="ritual-heading" tabindex="-1">Let it out.</h1>
+      <p class="ritual-sub">Whatever you've been carrying. Take your time.</p>
+      <div class="writing-well">
+        <label for="letter" class="sr-only">Write what you want to let go of</label>
+        <textarea id="letter" placeholder="Begin anywhere..." autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false"></textarea>
+      </div>
+      <p id="gentle-note" class="gentle-note" role="status" aria-live="polite"></p>
+      <div class="ritual-actions">
+        <button type="button" id="btn-direct-clearing" class="btn-whisper">Just sit by the fire</button>
+        <div class="ritual-actions-right">
+          <button type="button" id="btn-to-preview" class="btn-fire">Read it one last time</button>
+        </div>
+      </div>
+      <p class="privacy-whisper">Nothing you write here is ever saved or sent anywhere.</p>
+    </section>
+
+    <!-- Step 2: Read it one last time (actual physical firelit paper sheet) -->
+    <section id="view-preview" class="view" aria-labelledby="preview-heading" inert>
+      <h2 id="preview-heading" class="ritual-heading" tabindex="-1">Read it one last time.</h2>
+      <p class="ritual-sub">There's no rush. When you're ready, toss it into the fire.</p>
+      <div id="letter-paper" class="letter-paper">
+        <img id="letter-paper-bg" class="letter-paper-bg" src="assets/props/20_aged_parchment.png" alt="" aria-hidden="true" />
+        <div class="review-scroll" tabindex="0" role="region" aria-label="Your letter on paper">
+          <p id="review-body" class="review-body"></p>
+        </div>
+      </div>
+      <div class="ritual-actions">
+        <button type="button" id="btn-back-write" class="btn-whisper">Keep writing</button>
+        <div class="ritual-actions-right">
+          <button type="button" id="btn-let-go" class="btn-fire">Let it go</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Step 4: Comforting message beneath the full moon -->
+    <section id="view-final" class="view view-final" aria-labelledby="final-heading" inert>
+      <h2 id="final-heading" class="final-line" tabindex="-1">It's going to be okay.<br>You're going to be okay.</h2>
+      <p class="final-sub">You can put it down now.</p>
+      <div class="final-actions">
+        <button type="button" id="btn-enter-clearing" class="btn-fire">Sit by the fire</button>
+        <button type="button" id="btn-write-again" class="btn-whisper">Write something else</button>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Whisper-soft marshmallow offer & warmth note (Phase 7) -->
+  <div id="bear-offer-prompt" class="bear-offer-prompt" inert>
+    <span class="bear-offer-text">The bear holds out a warm marshmallow.</span>
+    <button type="button" id="btn-accept-marshmallow" class="btn-accept-marsh">Accept</button>
+  </div>
+  <p id="clearing-whisper" class="clearing-whisper" role="status" aria-live="polite"></p>
+
+  <!-- Quiet Skip button (only visible during the burn or sky glide) -->
+  <button type="button" id="btn-skip" class="skip-btn" hidden>Skip</button>
+
+  <!-- Whisper-subtle corner controls -->
+  <div class="corner-controls">
+    <button type="button" id="btn-open-write" class="corner-icon-btn" aria-label="Write something to let go of" title="Write something down">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"></path>
+        <line x1="16" y1="8" x2="2" y2="22"></line>
+        <line x1="17.5" y1="15" x2="9" y2="15"></line>
+      </svg>
+    </button>
+    <button type="button" id="audio-toggle" class="corner-icon-btn audio-toggle" aria-label="Sound settings" aria-pressed="false" aria-expanded="false" aria-controls="sound-popover" title="Sound (M)">
+      <svg class="icon-sound-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+        <line x1="22" y1="9" x2="16" y2="15"></line>
+        <line x1="16" y1="9" x2="22" y2="15"></line>
+      </svg>
+      <svg class="icon-sound-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+        <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+        <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Midnight-and-amber sound popover (starts muted) -->
+  <div id="sound-popover" class="sound-popover" role="group" aria-label="Sound controls" hidden>
+    <p class="sound-popover-title">Sound starts off. Adjust as you like.</p>
+    <div class="sound-row">
+      <div class="sound-row-top">
+        <label><input type="checkbox" id="amb-on"> Campfire &amp; forest</label>
+      </div>
+      <input type="range" id="amb-vol" min="0" max="100" value="75" aria-label="Campfire and forest volume">
+    </div>
+    <div class="sound-row">
+      <div class="sound-row-top">
+        <label><input type="checkbox" id="mus-on"> Soft night music</label>
+      </div>
+      <input type="range" id="mus-vol" min="0" max="100" value="55" aria-label="Soft night music volume">
+    </div>
+  </div>
+
+  <script src="js/scene.js"></script>
+  <script src="js/environment.js"></script>
+  <script src="js/bear.js"></script>
+  <script src="js/discoveries.js"></script>
+  <script src="js/burn.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
